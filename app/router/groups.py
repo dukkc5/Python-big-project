@@ -13,15 +13,15 @@ async def read_user_groups(
     current_user = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn)
 ):
-    return await get_user_groups(conn, current_user["id"])
+    return await get_user_groups(conn, current_user["user_id"])
 @router.post("/create_group",response_model=GroupOut)
 async def create_group_route(
     group:GroupCreate,
     current_user= Depends(get_current_user),
     conn:asyncpg.Connection=Depends(get_db_conn)
 ):
-    group_id = await create_group(conn,group.name,group.description,current_user["id"])
-    await add_member(conn,group_id,current_user["id"],role="admin")
+    group_id = await create_group(conn,group.name,group.description,current_user["user_id"])
+    await add_member(conn,group_id,current_user["user_id"],role="admin")
     return {"id": group_id, "name": group.name, "description": group.description}
 @router.get("/get_group_id/{group_id}")
 async def get_group(
