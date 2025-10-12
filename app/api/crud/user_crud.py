@@ -11,5 +11,5 @@ async def get_user_by_email(conn: asyncpg.Connection, email: str):
     row = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
     return dict(row) if row else None
 async def get_user_by_id(conn: asyncpg.Connection, id: int):
-    row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", id)
+    row = await conn.fetchrow("SELECT * FROM users WHERE user_id = $1", id)
     return dict(row) if row else None
