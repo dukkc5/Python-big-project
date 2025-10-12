@@ -9,6 +9,15 @@ app = FastAPI(
     description="API for managing group and assigning tasks",
     lifespan=lifespan
 )
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ← cho phép tất cả domain (chỉ dùng trong dev!)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(auth.router)
 app.include_router(groups.router)
 @app.get("/", include_in_schema=False)
