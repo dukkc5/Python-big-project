@@ -3,9 +3,9 @@ import asyncpg
 async def get_user_groups(conn: asyncpg.Connection, user_id: int):
     rows = await conn.fetch(
         """
-        SELECT g.id, g.name, g.description
+        SELECT g.group_id, g.group_name, g.description
         FROM groups g
-        JOIN group_members gm ON g.id = gm.group_id
+        JOIN group_members gm ON g.group_id = gm.group_id
         WHERE gm.user_id = $1
         """,
         user_id
@@ -13,7 +13,7 @@ async def get_user_groups(conn: asyncpg.Connection, user_id: int):
     return [dict(row) for row in rows]
 async def create_group(conn:asyncpg.Connection, name:str , description:str, owner_id :int):
     row = await conn.fetchrow(
-        "INSERT INTO groups (name , description , owner_id) VALUES ($1,$2,$3) RETURNING id",
+        "INSERT INTO groups (group_name , description , owner_id) VALUES ($1,$2,$3) RETURNING id",
         name , description , owner_id
     )
     return row["id"]
