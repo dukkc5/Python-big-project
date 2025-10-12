@@ -20,7 +20,7 @@ Một ứng dụng FastAPI kết nối database PostgreSQL trên [Neon.tech](htt
 
 ### 1. Clone repo
 ```bash
-git clone https://github.com/your-username/your-repo.git
+git clone https://github.com/dukkc5/Python-big-project.git
 cd your-repo
 ```
 
