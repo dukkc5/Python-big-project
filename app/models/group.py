@@ -2,10 +2,10 @@ from pydantic import BaseModel
 from typing import Optional
 
 class GroupCreate(BaseModel):
-    name: str
+    group_name: str
     description: Optional[str] = None
 
 class GroupOut(BaseModel):
-    id: int
-    name: str
+    group_id: int
+    group_name: str
     description: Optional[str] = None
