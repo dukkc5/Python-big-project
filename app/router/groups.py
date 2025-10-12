@@ -20,9 +20,9 @@ async def create_group_route(
     current_user= Depends(get_current_user),
     conn:asyncpg.Connection=Depends(get_db_conn)
 ):
-    group_id = await create_group(conn,group.name,group.description,current_user["user_id"])
+    group_id = await create_group(conn,group.group_name,group.description,current_user["user_id"])
     await add_member(conn,group_id,current_user["user_id"],role="leader")
-    return {"id": group_id, "name": group.name, "description": group.description}
+    return {"id": group_id, "name": group.group_name, "description": group.description}
 @router.get("/get_group_id/{group_id}")
 async def get_group(
     group_id : int,
