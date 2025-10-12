@@ -13,10 +13,10 @@ async def get_user_groups(conn: asyncpg.Connection, user_id: int):
     return [dict(row) for row in rows]
 async def create_group(conn:asyncpg.Connection, name:str , description:str, owner_id :int):
     row = await conn.fetchrow(
-        "INSERT INTO groups (group_name , description , owner_id) VALUES ($1,$2,$3) RETURNING id",
+        "INSERT INTO groups (group_name , description , owner_id) VALUES ($1,$2,$3) RETURNING group_id",
         name , description , owner_id
     )
-    return row["id"]
+    return row["group_id"]
 async def add_member(conn: asyncpg.Connection, group_id: int, user_id: int, role: str):
     await conn.execute(
         "INSERT INTO group_members (group_id, user_id, role) VALUES ($1, $2, $3)",
