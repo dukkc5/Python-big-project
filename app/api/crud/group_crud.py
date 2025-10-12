@@ -36,4 +36,3 @@ async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : i
 """,group_id,user_id
     )
     return row["role"] if row else None
-print("hellooo")
