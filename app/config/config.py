@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv()  # Đọc biến môi trường từ .env
+load_dotenv()  # ← Load .env trước khi tạo Settings (nếu cần)
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -9,8 +9,9 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    class Config:
-        env_file = ".env"  # Chỉ định file .env để đọc
-        env_file_encoding = "utf-8"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8"
+    }
 
 settings = Settings()
