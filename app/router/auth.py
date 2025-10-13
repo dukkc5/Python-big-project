@@ -11,7 +11,7 @@ from app.config.security import verify_password,create_acess_token
 from jose import jwt , JWTError
 
 router = APIRouter(prefix="/auth" ,tags=["auth"])
-@router.post("/register",status_code=status.HTTP_201_CREATED)
+@router.post("/register",status_code=status.HTTP_201_CREATED) #decorator 
 async def register(user: user.UserCreate,conn:asyncpg.Connection=Depends(get_db_conn)):
     db_user = await get_user_by_email(conn,user.email)
     if db_user:
@@ -21,11 +21,11 @@ async def register(user: user.UserCreate,conn:asyncpg.Connection=Depends(get_db_
 @router.post("/login")
 async def login(user: user.UserLogin, conn:asyncpg.Connection=Depends(get_db_conn)):
     db_user = await get_user_by_email(conn,user.email)
-    if not db_user:
+    if not db_user: # compare email
         raise HTTPException(404,"Incorect email or password")
-    if not verify_password(user.password,db_user["password_hash"]):
+    if not verify_password(user.password,db_user["password_hash"]): #compare passw
         raise HTTPException(404,"Incorect email or password")
-    access_token =create_acess_token(data={"sub":db_user["email"]})
+    access_token = create_acess_token(data={"sub":db_user["email"]}) # token chua thong tin cua user da login thanh cong
     return {"access_token":access_token,"token_type":"bearer"}
     
     

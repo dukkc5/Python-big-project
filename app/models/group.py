@@ -5,7 +5,7 @@ class GroupCreate(BaseModel):
     group_name: str
     description: Optional[str] = None
 
-class GroupOut(BaseModel):
-    group_id: int
+class GroupOut(BaseModel): # ten bien nay phai giong ten bien trong db
+    group_id: int 
     group_name: str
     description: Optional[str] = None

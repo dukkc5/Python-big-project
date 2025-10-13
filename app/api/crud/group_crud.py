@@ -25,9 +25,11 @@ async def add_member(conn: asyncpg.Connection, group_id: int, user_id: int, role
 async def get_group_id(conn : asyncpg.Connection,id :int):
     row = await conn.fetchrow(
         """
-    SELECT * FROM GROUPS WHERE id = $1
+    SELECT * FROM groups WHERE group_id = $1
 """,id
     )
+    if row == None:
+        return None
     return dict(row)
 async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : int):
     row = await conn.fetchrow(
@@ -36,3 +38,9 @@ async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : i
 """,group_id,user_id
     )
     return row["role"] if row else None
+async def remove_member(conn : asyncpg.Connection , group_id:int , user_id:int , ):
+    await conn.execute(
+        "DELETE FROM group_members WHERE group_id = $1 AND user_id = $2",group_id,user_id
+    )
+async def delete_group(conn:asyncpg.Connection,group_id:int):
+    await conn.execute("DELETE FROM groups WHERE group_id =$1",group_id)
