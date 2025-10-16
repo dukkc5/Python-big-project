@@ -31,7 +31,7 @@ async def get_group_id(conn : asyncpg.Connection,id :int):
     if row == None:
         return None
     return dict(row)
-async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : int):
+async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : int) :
     row = await conn.fetchrow(
         """
     SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2
@@ -44,3 +44,4 @@ async def remove_member(conn : asyncpg.Connection , group_id:int , user_id:int ,
     )
 async def delete_group(conn:asyncpg.Connection,group_id:int):
     await conn.execute("DELETE FROM groups WHERE group_id =$1",group_id)
+                                                                                                                                                                                      
