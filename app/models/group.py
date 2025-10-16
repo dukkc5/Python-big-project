@@ -11,3 +11,6 @@ class GroupOut(BaseModel): # ten bien nay phai giong ten bien trong db
     description: Optional[str] = None
 class MemberAdd(BaseModel):
     email: EmailStr
+class MemberToLeader(BaseModel):
+    email: EmailStr
+    

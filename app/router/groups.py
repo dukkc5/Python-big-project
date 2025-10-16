@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 from pstats import Stats
 from typing import List
 import asyncpg
@@ -9,8 +10,7 @@ from app.api.crud.group_crud import add_member, create_group, get_group_id, get_
 from app.api.crud.user_crud import get_user_by_email
 from app.api.deps import get_current_user, get_db_conn
 from app.config.db import get_db
-from app.models.group import GroupCreate, GroupOut,MemberAdd
-
+from app.models.group import GroupCreate, GroupOut,MemberAdd, MemberToLeader
 router = APIRouter(prefix="/groups",tags=["groups"])
 @router.get("/", response_model=List[GroupOut])
 async def read_user_groups(
@@ -56,7 +56,7 @@ async def delete_member(
     if role_current == "member":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you not authorized")
     if role == "leader":
-        raise HTTPException(403,"You can leave this group")
+        raise HTTPException(403,"Leader can't leave this group")
     await group_crud.remove_member(conn,group_id,user_id)
 @router.delete("/{group_id}",status_code=status.HTTP_204_NO_CONTENT)
 async def delete_group(
@@ -93,4 +93,25 @@ async def add_member(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED,"you are not leader , cant add new member")
     await group_crud.add_member(conn,group_id,user["user_id"],"member")
     return {"msg":"added"}
+@router.post("/{group_id}/members/{user_id}")
+async def make_member_to_leader(
+    group_id:int,
+    user_to_leader:MemberToLeader,
+    conn:asyncpg.Connection=Depends(get_db_conn),
+    current_user = Depends(get_current_user)
+):
+    user = await get_user_by_email(conn,user_to_leader.email)
+    if not user:
+        raise HTTPException(404,"This user does not exist")
+    if not await get_group_id(conn,group_id):
+        raise HTTPException(404,"This group does not exist")
+    # vao dc group
+    role = await get_user_role(conn,group_id,current_user["user_id"])
+    if not role :
+        raise HTTPException(404,"This member is not in this group")
+    if role =="member":
+        raise HTTPException(403,"You can't change")
+    
+    
+        
 
