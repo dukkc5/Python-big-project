@@ -2,6 +2,8 @@ from re import A
 import asyncpg
 import asyncpg
 
+from app.models.task import TaskCreate
+
 async def get_group_tasks(conn: asyncpg.Connection, group_id: int):
     rows = await conn.fetch(
     """
@@ -12,4 +14,41 @@ async def get_group_tasks(conn: asyncpg.Connection, group_id: int):
     )
     return [dict(row) for row in rows]
 
+async def create_group_tasks(conn: asyncpg.Connection, task:TaskCreate):
+    rows = await conn.fetchrow(
+    """
+    INSERT INTO tasks(group_id,title,description,deadline,created_by)  
+    VALUES ($1,$2,$3,$4)
+    """,task.group_id,task.title,task.description,task.deadline
+    )
+# Hàm này để tìm ra nhóm sở hữu nhiệm vụ đó.  
+async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id:int):
+    row = await conn.fetchrow(
+        "SELECT group_id FROM tasks WHERE task_id = $1", 
+        task_id
+    )  
+    return row['group_id'] if row else None
+
+async def check_role(conn:asyncpg.Connection, group_id:int, user_id : int):
+    row = await conn.fetchrow(
+        """
+        SELECT role 
+        FROM group_members 
+        WHERE group_id = $1 AND user_id = $2
+        """,
+        group_id,
+        user_id
+    )
+    return row['role'] if row else None
+async def create_users_tasks(conn: asyncpg.Connection, 
+                             task_id : int,
+                             user_id : int,
+                             comment : str):
+    rows = await conn.fetchrow(
+    """
+    INSERT INTO task_assignments (task_id, user_id, comment)
+    VALUES ($1,$2,$3)
+    """,task_id,user_id,comment
+    )
+    
     
