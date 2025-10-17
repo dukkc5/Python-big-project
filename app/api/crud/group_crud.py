@@ -22,7 +22,7 @@ async def add_member(conn: asyncpg.Connection, group_id: int, user_id: int, role
         "INSERT INTO group_members (group_id, user_id, role) VALUES ($1, $2, $3)",
         group_id, user_id, role
     )
-async def get_group_id(conn : asyncpg.Connection,id :int):
+async def get_group_id(conn:asyncpg.Connection , id :int)-> dict:
     row = await conn.fetchrow(
         """
     SELECT * FROM groups WHERE group_id = $1
@@ -44,4 +44,7 @@ async def remove_member(conn : asyncpg.Connection , group_id:int , user_id:int ,
     )
 async def delete_group(conn:asyncpg.Connection,group_id:int):
     await conn.execute("DELETE FROM groups WHERE group_id =$1",group_id)
-                                                                                                                                                                                      
+
+async def change_role(conn : asyncpg.Connection, group_id :int , user_id :int , role : str):
+    await conn.execute(
+    "UPDATE group_members SET role = $1 WHERE group_id=$2 AND user_id = $3",role,group_id,user_id )                                                                                                                                                                           
