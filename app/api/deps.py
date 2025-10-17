@@ -1,6 +1,7 @@
 import asyncpg
 from fastapi import Depends
 from fastapi import security,HTTPException
+from app.api.crud.group_crud import get_user_role
 from app.config.db import get_db
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from jose import JWTError , jwt
@@ -28,4 +29,14 @@ async def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
+async def check_user_role(
+    conn:asyncpg.Connection,
+    group_id : int,
+    user_id : int
+    
+):
+    role = await get_user_role(conn,group_id,user_id)
+    if not role:
+        raise HTTPException(404,"This member is not in group")
+    
 
