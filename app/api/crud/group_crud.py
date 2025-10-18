@@ -34,7 +34,7 @@ async def get_group_id(conn:asyncpg.Connection , id :int)-> dict:
 async def get_user_role(conn : asyncpg.Connection , group_id : int , user_id : int) :
     row = await conn.fetchrow(
         """
-    SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2
+    SELECT role _members WHERE group_id = $1 AND user_id = $2
 """,group_id,user_id
     )
     return row["role"] if row else None
