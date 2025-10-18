@@ -62,3 +62,35 @@ async def assign_task(
         raise HTTPException(403, "ko có quyền")
     await create_users_tasks(conn,task_id,user_id,"do this task")
     return {"msg":"done"}
+
+@router.delete("/{task_id}",status_code=status.HTTP_200_OK )
+async def delete_task(
+    group_id : int,
+    task_id : int,
+    current_user = Depends(get_current_user),
+    conn:asyncpg.Connection = Depends(get_db_conn)
+):
+    if not await get_group_id(conn,group_id):
+        raise HTTPException(404,"this group does not exist")
+    role = await get_user_role(conn,group_id,current_user["user_id"])
+    if not role:
+        raise HTTPException(status_code=403, detail="You are not in this group")
+    if role != "leader":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    await task_crud.remove_task_id(conn, task_id)
+    return {"message": "Deleted successfully"}
+
+@router.put("/{task_id}", response_model=TaskOut)
+async def update_task(
+    task_id: int,
+    task_data: TaskUpdate,
+    conn: asyncpg.Connection = Depends(get_db_conn),
+    current_user=Depends(get_current_user),
+):
+    updated = await task_crud.update_task(conn, task_id, task_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return dict(updated)
+
+
+

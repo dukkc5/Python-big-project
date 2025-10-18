@@ -17,7 +17,7 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: Optional[str]
     description: Optional[str]
-    status: Optional[str]
+    status: Optional[str] 
     deadline: Optional[datetime]
 
 class TaskAssignmentRequest(BaseModel):
