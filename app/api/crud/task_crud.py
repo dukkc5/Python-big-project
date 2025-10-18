@@ -29,22 +29,11 @@ async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id:int):
     )  
     return row['group_id'] if row else None
 
-async def check_role(conn:asyncpg.Connection, group_id:int, user_id : int):
-    row = await conn.fetchrow(
-        """
-        SELECT role 
-        FROM group_members 
-        WHERE group_id = $1 AND user_id = $2
-        """,
-        group_id,
-        user_id
-    )
-    return row['role'] if row else None
 async def create_users_tasks(conn: asyncpg.Connection, 
                              task_id : int,
                              user_id : int,
                              comment : str):
-    rows = await conn.fetchrow(
+   await conn.execute(
     """
     INSERT INTO task_assignments (task_id, user_id, comment)
     VALUES ($1,$2,$3)
