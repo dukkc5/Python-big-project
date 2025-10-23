@@ -9,10 +9,7 @@ from asyncpg.exceptions import (  # Thêm các exception CSDL
     ForeignKeyViolationError,
     UniqueViolationError,
 )
-from click import group
 from fastapi import APIRouter, Depends, HTTPException, status  # Thêm status
-from httpx import get
-from pydantic import EmailStr
 
 from app.api.crud import group_crud, invitations_crud
 from app.api.crud.group_crud import (
@@ -23,14 +20,12 @@ from app.api.crud.group_crud import (
     get_user_groups,
     get_user_role,
 )
-from app.api.crud.user_crud import get_user_by_email
+from app.api.crud.user_crud import get_user_by_account
 from app.api.deps import get_current_user, get_db_conn
-from app.config.db import get_db
 from app.models import invitations
 from app.models.group import GroupCreate, GroupOut, MemberAdd, MemberToLeader
 
 router = APIRouter(prefix="/groups", tags=["groups"])
-
 
 @router.get("/", response_model=List[GroupOut])
 async def read_user_groups(
@@ -112,19 +107,19 @@ async def get_group(
         )
 
 
-@router.delete("/{group_id}/members/{email}")
+@router.delete("/{group_id}/members/{account}")
 async def delete_member(
     group_id: int,
-    email: EmailStr,
+    account:str,
     current_user=Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     try:
-        user = await get_user_by_email(conn, email)
+        user = await get_user_by_account(conn, account)
         if not user:
             # Đây là lỗi logic bạn đã bỏ sót, tôi thêm vào
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Email này không tồn tại"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Account này không tồn tại"
             )
 
         if not await get_group_id(conn, group_id):
@@ -144,7 +139,6 @@ async def delete_member(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền này"
             )
-
         if role == "leader":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -227,9 +221,9 @@ async def add_new_member(
             )
 
         role_of_user = await get_user_role(conn, group_id, user["user_id"])
-        if role_of_user: # Chỉ cần check `if role_of_user` là đủ
+        if role_of_user: 
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, # 409 (Conflict) thì đúng hơn 302
+                status_code=status.HTTP_409_CONFLICT, 
                 detail="Thành viên này đã ở trong nhóm",
             )
 
@@ -258,7 +252,7 @@ async def add_new_member(
         )
         if id:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, # 409 (Conflict) thì đúng hơn 303
+                status_code=status.HTTP_409_CONFLICT, 
                 detail="Bạn đã gửi lời mời cho user này rồi",
             )
             
@@ -266,7 +260,6 @@ async def add_new_member(
         return {"msg": "Đã gửi lời mời thành công"}
 
     except (UniqueViolationError, ForeignKeyViolationError) as e:
-        # Bắt lỗi nếu gửi invitation bị lỗi CSDL
         logging.warning(f"Lỗi 422 khi add_new_member: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -288,7 +281,7 @@ async def make_member_to_leader(
     current_user=Depends(get_current_user),
 ):
     try:
-        user = await get_user_by_email(conn, user_to_leader.email)
+        user = await get_user_by_account(conn, user_to_leader.account)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User này không tồn tại"

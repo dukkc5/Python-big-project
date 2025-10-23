@@ -21,11 +21,9 @@ async def get_user_invitations(
     Lấy tất cả lời mời của user hiện tại.
     """
     try:
-        # Tương tác CSDL luôn cần try-except
         return await get_invitations(conn,current_user["user_id"])
     
     except Exception as e:
-        # Bắt các lỗi chung (ví dụ: mất kết nối CSDL)
         logging.error(f"Lỗi 500 khi get_user_invitations: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -44,9 +42,6 @@ async def reply_invitations(
     Trả lời một lời mời (accepted hoặc declined).
     Bao gồm nhiều thao tác CSDL nên cần được bảo vệ cẩn thận.
     """
-    
-    # --- 1. Validation (Lỗi logic 4xx) ---
-    # Xử lý các lỗi logic nghiệp vụ trước
     if reply.lower() not in ("accepted","rejected"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -54,23 +49,15 @@ async def reply_invitations(
         )
 
     try:
-        # --- 2. Thực thi I/O (CSDL) ---
-        
-        # Cập nhật trạng thái lời mời
         await reply_invitations_SQL(conn, group_id, invitation_id, reply)
         
-        # Nếu đồng ý, thêm user vào nhóm
         if reply.lower() == "accepted":
             await add_member(conn, group_id, current_user["user_id"], "member")
-        
-        # Sau khi xử lý xong, xóa lời mời đi
         await delete_invitations(conn, invitation_id)
         
         return {"msg": f"Đã {reply} lời mời thành công."}
 
-    # --- 3. Bắt các lỗi CSDL cụ thể ---
     except ForeignKeyViolationError:
-        # Lỗi này xảy ra nếu group_id hoặc user_id không tồn tại
         logging.warning(f"Lỗi 404 khi reply_invitations: group_id hoặc user_id không tồn tại.")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -78,14 +65,11 @@ async def reply_invitations(
         )
         
     except UniqueViolationError:
-        # Lỗi này RẤT CÓ THỂ xảy ra nếu user đã là thành viên của nhóm
         logging.warning(f"Lỗi 409 khi reply_invitations: User {current_user['user_id']} đã ở trong nhóm {group_id}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Bạn đã là thành viên của nhóm này."
         )
-
-    # --- 4. Bắt các lỗi hệ thống còn lại ---
     except Exception as e:
         logging.error(f"Lỗi 500 khi reply_invitations: {e}", exc_info=True)
         raise HTTPException(

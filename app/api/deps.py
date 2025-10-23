@@ -5,7 +5,7 @@ from app.api.crud.group_crud import get_user_role
 from app.config.db import get_db
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from jose import JWTError , jwt
-from app.api.crud.user_crud import get_user_by_email
+from app.api.crud.user_crud import get_user_by_account
 security =  HTTPBearer()
 from app.config.config import settings
 
@@ -19,13 +19,13 @@ async def get_current_user (
     token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        account: str = payload.get("sub")
+        if account is None:
             raise HTTPException(status_code=401, detail="Could not validate credentials")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = await get_user_by_email(conn, email)
+    user = await get_user_by_account(conn, account)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
