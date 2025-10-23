@@ -214,7 +214,7 @@ async def add_new_member(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy nhóm này"
             )
 
-        user = await get_user_by_email(conn, user_add.email)
+        user = await get_user_by_account(conn, user_add.account)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User này không tồn tại"

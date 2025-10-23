@@ -47,15 +47,17 @@ async def reply_invitations(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Giá trị 'reply' chỉ có thể là 'accepted' hoặc 'rejected'"
         )
+    elif not reply:
+        raise HTTPException(404,"This invitation not exist")
 
     try:
         await reply_invitations_SQL(conn, group_id, invitation_id, reply)
         
         if reply.lower() == "accepted":
             await add_member(conn, group_id, current_user["user_id"], "member")
-        await delete_invitations(conn, invitation_id)
-        
-        return {"msg": f"Đã {reply} lời mời thành công."}
+
+        await delete_invitations(conn, invitation_id)        
+        return {"msg": f"Đã {reply} "}
 
     except ForeignKeyViolationError:
         logging.warning(f"Lỗi 404 khi reply_invitations: group_id hoặc user_id không tồn tại.")
