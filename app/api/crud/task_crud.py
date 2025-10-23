@@ -21,7 +21,7 @@ async def create_group_tasks(conn: asyncpg.Connection, task:TaskCreate):
     VALUES ($1,$2,$3,$4)
     """,task.group_id,task.title,task.description,task.deadline
     )
-# Hàm này để tìm ra nhóm sở hữu nhiệm vụ đó.  
+ 
 async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id:int):
     row = await conn.fetchrow(
         "SELECT group_id FROM tasks WHERE task_id = $1", 
