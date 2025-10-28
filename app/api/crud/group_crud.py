@@ -47,4 +47,23 @@ async def delete_group(conn:asyncpg.Connection,group_id:int):
 
 async def change_role(conn : asyncpg.Connection, group_id :int , user_id :int , role : str):
     await conn.execute(
-    "UPDATE group_members SET role = $1 WHERE group_id=$2 AND user_id = $3",role,group_id,user_id )                                                                                                                                                                           
+    "UPDATE group_members SET role = $1 WHERE group_id=$2 AND user_id = $3",role,group_id,user_id )   
+async def get_group_member(conn: asyncpg.Connection , group_id : int):
+            rows = await conn.fetch(
+                """SELECT
+            u.user_id,
+            u.full_name,
+            u.account,
+            gm.role
+        FROM
+            users u
+        JOIN
+            group_members gm ON u.user_id = gm.user_id
+        WHERE
+            gm.group_id = $1; 
+        """,group_id)                                                                                                                                                                        
+            return [dict(row) for row in rows]
+async def leave_group(conn:asyncpg.Connection , group_id :int,user_id:int):
+    await conn.execute("""
+    DELETE FROM group_members WHERE group_id = $1 AND user_id = $2
+""",group_id,user_id)

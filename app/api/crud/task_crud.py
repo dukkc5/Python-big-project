@@ -7,7 +7,7 @@ from app.models.task import TaskCreate
 async def get_group_tasks(conn: asyncpg.Connection, group_id: int):
     rows = await conn.fetch(
     """
-    SELECT t.title,t.description 
+    SELECT t.task_id,t.title,t.description,t.status,t.deadline
     FROM tasks t
     WHERE group_id = $1
     """,group_id
@@ -18,9 +18,10 @@ async def create_group_tasks(conn: asyncpg.Connection, task:TaskCreate):
     rows = await conn.fetchrow(
     """
     INSERT INTO tasks(group_id,title,description,deadline)  
-    VALUES ($1,$2,$3,$4)
+    VALUES ($1,$2,$3,$4) RETURNING *
     """,task.group_id,task.title,task.description,task.deadline
     )
+    return dict(rows)
  
 async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id:int):
     row = await conn.fetchrow(
@@ -41,8 +42,8 @@ async def create_users_tasks(conn: asyncpg.Connection,
     )
    
 async def remove_task_id(conn: asyncpg.Connection, task_id: int):
-    await conn.execute("DELETE FROM tasks WHERE task_id =$1",task_id)
-    
+    rows =  await conn.fetchrow("DELETE FROM tasks WHERE task_id =$1 RETURNING * ",task_id)
+    return dict(rows) 
 async def update_task(conn, task_id, task_data):
     row = await conn.fetchrow(
         """
@@ -54,5 +55,6 @@ async def update_task(conn, task_id, task_data):
         task_data.title, task_data.description, task_data.deadline, task_data.status, task_id
     )
     return row
+
     
     

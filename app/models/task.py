@@ -1,10 +1,13 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 class TaskOut(BaseModel):
+    task_id : int
     title: str
     description: Optional[str]
+    status :str
+    deadline : date
 
 
 class TaskCreate(BaseModel):

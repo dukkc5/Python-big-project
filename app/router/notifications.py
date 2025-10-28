@@ -15,13 +15,4 @@ from asyncpg.exceptions import ForeignKeyViolationError
 from pydantic import BaseModel
 from asyncpg import PostgresError, exceptions
 
-router = APIRouter(prefix="/notifications",tags=["notifications"])
-@router.post("/",status_code=200)
-async def create_noti(
-    notification:NotificationOut,
-    current_user=Depends(get_current_user),
-    conn: asyncpg.Connection=Depends(get_db_conn)
-):
-    try:
-
     
