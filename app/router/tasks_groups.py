@@ -67,45 +67,6 @@ async def create_group_task(
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
-@router.post("/assign", status_code=status.HTTP_201_CREATED)
-async def assign_task(
-    task_id: int,
-    user_id: int,
-    current_user=Depends(get_current_user),
-    conn=Depends(get_db_conn)
-):
-    try:
-        group_id = await get_group_id_by_task_id(conn, task_id)
-        if not group_id:
-            raise HTTPException(status_code=404, detail="Không tồn tại nhiệm vụ này")
-
-        check_role = await get_user_role(conn, group_id, user_id)
-        if not check_role:
-            raise HTTPException(status_code=404, detail="Không có user này trong nhóm")
-
-        role = await get_user_role(conn, group_id, current_user["user_id"])
-        if role == "member":
-            raise HTTPException(status_code=403, detail="Không có quyền giao nhiệm vụ")
-
-        await create_users_tasks(conn, task_id, user_id, "do this task")
-
-        return {"msg": "Giao nhiệm vụ thành công"}
-
-    except exceptions.UniqueViolationError:
-        raise HTTPException(status_code=400, detail="Người này đã được giao task này rồi")
-
-    except PostgresError as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi cơ sở dữ liệu: {str(e)}")
-
-    except HTTPException:
-        raise 
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi không xác định: {str(e)}")
-
-
-from asyncpg import PostgresError, exceptions
-
 @router.delete("/{task_id}", status_code=status.HTTP_200_OK)
 async def delete_task(
     group_id: int,

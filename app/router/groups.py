@@ -1,12 +1,11 @@
-from enum import member
-import logging  # Thêm logging
+import logging  
 from operator import imod
 from pstats import Stats
 import stat
 from typing import List
 
 import asyncpg
-from asyncpg.exceptions import (  # Thêm các exception CSDL
+from asyncpg.exceptions import (  
     DataError,
     ForeignKeyViolationError,
     UniqueViolationError,

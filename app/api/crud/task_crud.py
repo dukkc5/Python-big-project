@@ -32,13 +32,14 @@ async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id:int):
 
 async def create_users_tasks(conn: asyncpg.Connection, 
                              task_id : int,
-                             user_id : int,
+                             assigner_id: int,
+                             assignee_id: int,
                              comment : str):
    await conn.execute(
     """
-    INSERT INTO task_assignments (task_id, user_id, comment)
-    VALUES ($1,$2,$3)
-    """,task_id,user_id,comment
+    INSERT INTO task_assignments (task_id,assigner_id,assignee_id, comment)
+    VALUES ($1,$2,$3,$4)
+    """,task_id,assigner_id,assignee_id,comment
     )
    
 async def remove_task_id(conn: asyncpg.Connection, task_id: int):

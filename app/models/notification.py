@@ -15,4 +15,4 @@ class NotificationOut(BaseModel):
     is_read: bool
     type: Optional[str]
     task_id: Optional[int]
-    created_at: datetime
+    created_at: datetime    
