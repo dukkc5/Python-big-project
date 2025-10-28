@@ -1,10 +1,10 @@
-import logging  # Thêm logging
+import logging  
 from operator import imod
 from pstats import Stats
 from typing import List
 
 import asyncpg
-from asyncpg.exceptions import (  # Thêm các exception CSDL
+from asyncpg.exceptions import (  
     DataError,
     ForeignKeyViolationError,
     UniqueViolationError,

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from websockets import route
 
 from app.config.db import lifespan
-from app.router import auth, group_invitations, groups, tasks
+from app.router import auth, group_invitations, groups, notifications, task_assignment, tasks_groups
 
 app = FastAPI(
     title="TeamWork Env",
@@ -20,8 +20,10 @@ app.add_middleware(
 )
 app.include_router(auth.router)
 app.include_router(groups.router)
-app.include_router(tasks.router)
+app.include_router(tasks_groups.router)
 app.include_router(group_invitations.router)
+app.include_router(task_assignment.router)
+app.include_router(notifications.router)
 @app.get("/", include_in_schema=False)
 async def root():
     return {"message": "Bay h la 1h56"}
