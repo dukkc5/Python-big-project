@@ -1,3 +1,4 @@
+from tokenize import Comment
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
@@ -9,7 +10,11 @@ class TaskAssignmentBase(BaseModel):
 
 class TaskAssignmentCreate(TaskAssignmentBase):
     pass
-
+class TaskAssignment(BaseModel):
+    task_id :int
+    user_id:int
+    comment:str
+    deadline: datetime
 class TaskAssignmentOut(BaseModel):
     task_id: int
     task_name: str
@@ -20,5 +25,5 @@ class TaskAssignmentOut(BaseModel):
 
 class AssignmentUpdate(BaseModel):
     status: Optional[str] = None
-    deadline: Optional[str] = None
+    deadline: Optional[datetime] = None
     comment: Optional[str] = None

@@ -3,12 +3,12 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException,status
 from websockets import Router
 
-from app.api import task_assignment_crud
+from app.api.crud import task_assignment_crud
 from app.api.deps import get_current_user, get_db_conn
 from app.api.crud.group_crud import get_user_role
 from app.api.crud.task_crud import create_users_tasks, get_group_id_by_task_id
 from app.models.task import TaskOut
-from app.models.task_assignment import AssignmentUpdate, TaskAssignmentOut
+from app.models.task_assignment import AssignmentUpdate, TaskAssignment, TaskAssignmentOut
 
 router = APIRouter(prefix="/tasks_assignments",tags=["tasks_assignments"])
 @router.get("/my-tasks", response_model=List[TaskAssignmentOut])
@@ -36,17 +36,16 @@ async def get_my_tasks(
  
 @router.post("/assign", status_code=status.HTTP_201_CREATED)
 async def assign_task(
-    task_id: int,
-    user_id: int,
+    assignment : TaskAssignment,
     current_user=Depends(get_current_user),
     conn=Depends(get_db_conn)
 ):
     try:
-        group_id = await get_group_id_by_task_id(conn, task_id)
+        group_id = await get_group_id_by_task_id(conn,assignment.task_id)
         if not group_id:
             raise HTTPException(status_code=404, detail="Không tồn tại nhiệm vụ này")
 
-        check_role = await get_user_role(conn, group_id, user_id)
+        check_role = await get_user_role(conn, group_id, assignment.user_id)
         if not check_role:
             raise HTTPException(status_code=404, detail="Không có user này trong nhóm")
 
@@ -54,7 +53,7 @@ async def assign_task(
         if role == "member":
             raise HTTPException(status_code=403, detail="Không có quyền giao nhiệm vụ")
 
-        await create_users_tasks(conn, task_id, user_id,current_user["user_id"], "do this task")
+        await create_users_tasks(conn,assignment.task_id, assignment.user_id,current_user["user_id"], assignment.comment,assignment.deadline)
 
         return {"msg": "Giao nhiệm vụ thành công"}
 
@@ -121,3 +120,7 @@ async def update_task_assignment(
     if not update:
         raise HTTPException(status_code=400, detail="Cập nhật thất bại.")
     return {"message": "Cập nhật nhiệm vụ cá nhân thành công", "assignment": update}
+@router.get("/list/{task_id}")
+async def get_list_user(task_id :int ,conn: asyncpg.Connection = Depends(get_db_conn),
+    current_user = Depends(get_current_user)):
+    return await task_assignment_crud.get_user_related_to_task(conn,task_id)

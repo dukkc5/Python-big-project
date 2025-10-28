@@ -46,7 +46,7 @@ async def get_group_id_by_task_id(conn: asyncpg.Connection, task_id: int):
     return row["group_id"] if row else None
 
 async def get_user_id_by_assignment_id(conn:asyncpg.Connection, assignment_id:int):
-    rows = await conn.fetch(
+    row = await conn.fetchrow(
     """
         SELECT  assignee_id AS user_id
         FROM task_assignments
@@ -54,19 +54,36 @@ async def get_user_id_by_assignment_id(conn:asyncpg.Connection, assignment_id:in
     """,
     assignment_id
     )
-    return dict(rows) if rows else None
+    return dict(row) if row else None
 
-async def update_task_assignment(conn: asyncpg.Connection, assignment_id:int,status:str,deadline, comment:str):
-    rows = await conn.fetch(
+async def update_task_assignment(conn: asyncpg.Connection, assignment_id:int,status:str, deadline:datetime, comment:str):
+    row = await conn.fetchrow(
     """
         UPDATE task_assignments
         SET 
             status = $1,
             deadline = $2,
-            comment = $3,
+            comment = $3
         WHERE
             assignment_id = $4
-        RETURNING assignment_id, task_id, user_id, status , deadline , comment;             
+        RETURNING assignment_id, task_id, status , deadline , comment;             
     """,status,deadline, comment, assignment_id
     )
-    return dict(rows) if rows else None
+    return dict(row) if row else None
+async def get_user_related_to_task(conn:asyncpg.Connection,task_id :int):
+    rows = await conn.fetch("""
+    SELECT
+        ta.assignment_id, 
+        ta.task_id,        
+        ta.assigner_id,        
+        u.full_name,      
+        ta.comment,        
+        ta.status,        
+        ta.deadline      
+    FROM
+        task_assignments ta 
+    JOIN
+        users u ON ta.assigner_id = u.user_id
+    WHERE
+        ta.task_id = $1 """,task_id)
+    return [row for row in rows]
