@@ -5,16 +5,19 @@ import logging # Thêm thư viện logging để ghi lại lỗi
 
 # Import các exception cụ thể từ asyncpg
 from asyncpg.exceptions import UniqueViolationError, DataError
+from h11 import Connection
 
 from app.api.crud.user_crud import create_user, get_user_by_account
-from app.api.deps import get_db_conn
+from app.api.deps import get_current_user, get_db_conn
 from app.models import user 
 from app.config.security import verify_password, create_acess_token
 
 # Khởi tạo router
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
+@router.get("/me",response_model=user.UserOut)
+async def get_me(current_user = Depends(get_current_user)):
+    return current_user
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user: user.UserCreate, 
@@ -25,14 +28,14 @@ async def register(
     Đã được bọc try-except để xử lý lỗi CSDL.
     """
     try:
-        db_user = await get_user_by_account(conn, user.acccount)
+        db_user = await get_user_by_account(conn, user.account)
         if db_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Account đã được đăng ký"
             )
 
-        await create_user(conn, user.acccount, user.password, user.full_name)
+        await create_user(conn, user.account, user.password, user.full_name)
         
         return {"msg": "User created"}
     except UniqueViolationError:

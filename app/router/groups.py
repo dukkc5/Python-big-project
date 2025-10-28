@@ -1,6 +1,7 @@
 import logging  
 from operator import imod
 from pstats import Stats
+import stat
 from typing import List
 
 import asyncpg
@@ -17,8 +18,10 @@ from app.api.crud.group_crud import (
     change_role,
     create_group,
     get_group_id,
+    get_group_member,
     get_user_groups,
     get_user_role,
+    leave_group
 )
 from app.api.crud.user_crud import get_user_by_account
 from app.api.deps import get_current_user, get_db_conn
@@ -40,8 +43,31 @@ async def read_user_groups(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Có lỗi hệ thống xảy ra.",
         )
-
-
+@router.delete("/leave/{group_id}",status_code=200)
+async def leave_group_member(
+    group_id :int,
+    conn: asyncpg.Connection = Depends(get_db_conn),
+    current_user=Depends(get_current_user),
+):  
+        role = await get_user_role(conn,group_id,current_user["user_id"])
+        if role == 'leader':
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Leader không thể rời nhóm")
+        await leave_group(conn,group_id,current_user["user_id"])
+@router.get("/members")
+async def read_group_member(
+    group_id :int,
+    current_user=Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+):
+    try:
+        role = get_user_role(conn,group_id,current_user["user_id"])
+        if not role:
+            raise HTTPException(status_code=403, detail="Not authorized to view members")
+        members = await get_group_member(conn,group_id)
+        return members
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @router.post("/", response_model=GroupOut)
 async def create_group_route(
     group: GroupCreate,
@@ -276,17 +302,11 @@ async def add_new_member(
 @router.post("/{group_id}/members/{user_id}")
 async def make_member_to_leader(
     group_id: int,
-    user_to_leader: MemberToLeader,
+    user_id :int,
     conn: asyncpg.Connection = Depends(get_db_conn),
     current_user=Depends(get_current_user),
 ):
     try:
-        user = await get_user_by_account(conn, user_to_leader.account)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User này không tồn tại"
-            )
-
         if not await get_group_id(conn, group_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Nhóm này không tồn tại"
@@ -305,7 +325,7 @@ async def make_member_to_leader(
             )
 
         # Thêm check: user được chuyển quyền phải là member
-        role_user_to_leader = await get_user_role(conn, group_id, user["user_id"])
+        role_user_to_leader = await get_user_role(conn, group_id, user_id)
         if not role_user_to_leader:
              raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -313,7 +333,7 @@ async def make_member_to_leader(
             )
         
         # Cập nhật quyền
-        await change_role(conn, group_id, user["user_id"], "leader")
+        await change_role(conn, group_id, user_id, "leader")
         await change_role(conn, group_id, current_user["user_id"], "member")
         
         return {"msg": "Chuyển quyền leader thành công"}

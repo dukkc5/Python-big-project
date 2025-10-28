@@ -37,7 +37,7 @@ async def read_group_tasks(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-@router.post("/", status_code=200)
+@router.post("/", status_code=201)
 async def create_group_task(
     task: TaskCreate,
     current_user=Depends(get_current_user),
@@ -54,9 +54,8 @@ async def create_group_task(
         if role == "member":
             raise HTTPException(status_code=403, detail="Not authorized")
 
-        await create_group_tasks(conn, task)
-
-        return {"msg": "Tạo task thành công"}
+        new_task = await create_group_tasks(conn, task)
+        return new_task
 
     except asyncpg.PostgresError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
