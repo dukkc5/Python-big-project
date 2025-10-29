@@ -16,13 +16,12 @@ class TaskAssignment(BaseModel):
     comment:str
     deadline: datetime
 class TaskAssignmentOut(BaseModel):
-    task_id: int
-    task_name: str
-    group_name: str
-    assigned_by: str
-    status: Optional[str]
-    deadline: Optional[datetime]
-
+    assignment_id: int
+    group_name: Optional[str] = None
+    task_title: str
+    comment: Optional[str] = None
+    status : str
+    deadline: Optional[datetime] = None
 class AssignmentUpdate(BaseModel):
     status: Optional[str] = None
     deadline: Optional[datetime] = None

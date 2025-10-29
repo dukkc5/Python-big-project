@@ -132,6 +132,11 @@ async def get_group(
             detail="Có lỗi hệ thống xảy ra.",
         )
 
+@router.get("/current_role/{group_id}")
+async def get_current_role(group_id:int,current_user=Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),):
+    role = await get_user_role(conn,group_id,current_user["user_id"])
+    return role
 
 @router.delete("/{group_id}/members/{account}")
 async def delete_member(

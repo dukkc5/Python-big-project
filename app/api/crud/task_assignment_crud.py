@@ -5,21 +5,18 @@ import asyncpg
 async def get_user_tasks(conn: asyncpg.Connection, user_id: int):
     rows = await conn.fetch(
     """
-        SELECT 
-            ta.assignment_id,
-            t.task_id,
-            t.title AS task_title,
-            t.description,
-            t.status AS task_status,
-            ta.status AS assignment_status,
-            u.full_name AS assigner_name,
-            ta.comment,
-            ta.created_at AS assigned_at
-        FROM task_assignments ta
-        JOIN tasks t ON ta.task_id = t.task_id
-        JOIN users u ON ta.assigner_id = u.user_id
-        WHERE ta.assignee_id = $1
-        ORDER BY ta.created_at DESC;
+      SELECT
+      g.group_name,
+    ta.assignment_id,
+    t.title AS task_title,
+    ta.comment,
+    ta.deadline,
+    ta.status
+    FROM task_assignments ta
+    JOIN tasks t ON ta.task_id = t.task_id
+    LEFT JOIN groups g ON t.group_id = g.group_id
+    WHERE ta.assignee_id = $1
+    ORDER BY ta.created_at DESC;
     """,user_id
     )
     return [dict(row) for row in rows]
@@ -87,3 +84,18 @@ async def get_user_related_to_task(conn:asyncpg.Connection,task_id :int):
     WHERE
         ta.task_id = $1 """,task_id)
     return [row for row in rows]
+async def update_assignment_file(conn: asyncpg.Connection, assignment_id: int, file_url: str):
+    """
+    Cập nhật cột attachment_url cho một assignment cụ thể.
+    """
+    query = """
+        UPDATE task_assignments
+        SET attachment_url = $1
+        WHERE assignment_id = $2
+    """
+    try:
+        await conn.execute(query, file_url, assignment_id)
+        return True
+    except Exception as e:
+        print(f"Lỗi cập nhật CSDL (attachment_url): {e}")
+        return False
