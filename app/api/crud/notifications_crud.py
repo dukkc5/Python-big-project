@@ -1,36 +1,28 @@
+
 import asyncpg
+from typing import List, Dict, Any
 
+async def get_notifications_by_user(
+    conn: asyncpg.Connection, 
+    user_id: int
+) -> List[asyncpg.Record]:
+    """Lấy tất cả thông báo của user từ CSDL."""
 
-async def create_notification(conn:asyncpg.Connection, user_id:int, message:str,
-                              type: str = None, task_id: int = None):
-    row = await conn.fetchrow(
-    """
-    INSERT INTO notifications (user_id, message,type,task_id)
-    VALUES ($1,$2,$3,$4)
-    RETURNING *
-    """,user_id,message,type,task_id
-    )   
-    return dict(row)
-
-async def get_notification(conn: asyncpg.Connection, user_id: int):
-    rows = await conn.fetch(
-    """
-       SELECT 
-            n.notification_id,
-            n.user_id,
-            n.task_id,
-            n.created_at,
-            u.full_name AS leader_name
-        FROM notifications n
-        JOIN tasks t ON n.task_id = t.task_id
-        JOIN groups g ON t.group_id = g.group_id
-        JOIN group_member gm ON g.group_id = gm.group_id
-        JOIN users u ON gm.user_id = u.id
-        WHERE 
-            n.user_id = $1
-            AND gm.role = 'leader'
-        ORDER BY n.created_at DESC;
-    """,
-    user_id
-    )
+    rows = await conn.fetch("SELECT notification_id, user_id, message, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC" , user_id)
     return [dict(row) for row in rows]
+
+# ===== XÓA =====
+async def delete_all_notifications_by_user(
+    conn: asyncpg.Connection, 
+    user_id: int
+) -> bool:
+    """Xóa tất cả thông báo của user."""
+    
+    query = "DELETE FROM notifications WHERE user_id = $1"
+    
+    try:
+        await conn.execute(query, user_id)
+        return True
+    except Exception as e:
+        print(f"Lỗi DB [delete_all_notifications_by_user]: {e}")
+        return False

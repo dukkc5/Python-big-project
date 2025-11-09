@@ -5,18 +5,7 @@ import asyncpg
 async def get_user_tasks(conn: asyncpg.Connection, user_id: int):
     rows = await conn.fetch(
     """
-      SELECT
-      g.group_name,
-    ta.assignment_id,
-    t.title AS task_title,
-    ta.comment,
-    ta.deadline,
-    ta.status
-    FROM task_assignments ta
-    JOIN tasks t ON ta.task_id = t.task_id
-    LEFT JOIN groups g ON t.group_id = g.group_id
-    WHERE ta.assignee_id = $1
-    ORDER BY ta.created_at DESC;
+     SELECT * FROM get_task_assignments_by_user($1);
     """,user_id
     )
     return [dict(row) for row in rows]
@@ -76,7 +65,8 @@ async def get_user_related_to_task(conn:asyncpg.Connection,task_id :int):
         u.full_name,      
         ta.comment,        
         ta.status,        
-        ta.deadline      
+        ta.deadline, 
+        ta.attachment_url     
     FROM
         task_assignments ta 
     JOIN

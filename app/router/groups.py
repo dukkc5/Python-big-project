@@ -1,16 +1,20 @@
 import logging  
 from operator import imod
+import os
 from pstats import Stats
+import shutil
 import stat
 from typing import List
+import uuid
 
+from anyio import current_effective_deadline
 import asyncpg
 from asyncpg.exceptions import (  
     DataError,
     ForeignKeyViolationError,
     UniqueViolationError,
 )
-from fastapi import APIRouter, Depends, HTTPException, status  # Thêm status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status  # Thêm status
 
 from app.api.crud import group_crud, invitations_crud
 from app.api.crud.group_crud import (
@@ -26,11 +30,68 @@ from app.api.crud.group_crud import (
 from app.api.crud.user_crud import get_user_by_account
 from app.api.deps import get_current_user, get_db_conn
 from app.models import invitations
-from app.models.group import GroupCreate, GroupOut, MemberAdd, MemberToLeader
+from app.models.group import GroupCreate, GroupOut, GroupOutWithDetails, GroupUpdate, MemberAdd, MemberToLeader
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
-@router.get("/", response_model=List[GroupOut])
+STATIC_GROUP_AVATAR_DIR = "static/avatars/groups"
+BASE_URL = "https://oared-willa-teughly.ngrok-free.dev" # (URL ngrok của bạn)
+
+
+@router.post("/{group_id}/avatar")
+async def upload_group_avatar(
+    group_id: int,
+    current_user=Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+    file: UploadFile = File(...)
+):
+    """Tải lên avatar cho một nhóm (Chỉ Leader)."""
+    
+    # 1. (QUAN TRỌNG) Kiểm tra quyền Leader
+    try:
+        role = await conn.fetchval(
+            """
+            SELECT role FROM group_members 
+            WHERE user_id = $1 AND group_id = $2
+            """,
+            current_user["user_id"], group_id
+        )
+        
+        if role != 'leader':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Chỉ leader mới có quyền thay đổi avatar nhóm"
+            )
+            
+    except Exception as e:
+        print(f"Lỗi kiểm tra quyền: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi máy chủ")
+
+
+    # 3. Tạo tên file duy nhất
+    file_extension = file.filename.split(".")[-1]
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = os.path.join(STATIC_GROUP_AVATAR_DIR, unique_filename)
+
+    # 4. Lưu file vào thư mục static
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Không thể lưu file: {e}")
+    finally:
+        file.file.close()
+
+    # 5. Tạo URL đầy đủ
+    avatar_url = f"{BASE_URL}/static/avatars/groups/{unique_filename}"
+
+    # 6. Cập nhật CSDL
+    await conn.execute(
+        "UPDATE groups SET avatar_url = $1 WHERE group_id = $2",
+        avatar_url, group_id
+    )
+    return {"avatar_url": avatar_url}
+@router.get("/", response_model=List[GroupOutWithDetails])
 async def read_user_groups(
     current_user=Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn),
@@ -49,10 +110,11 @@ async def leave_group_member(
     conn: asyncpg.Connection = Depends(get_db_conn),
     current_user=Depends(get_current_user),
 ):  
-        role = await get_user_role(conn,group_id,current_user["user_id"])
-        if role == 'leader':
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Leader không thể rời nhóm")
+    try:
         await leave_group(conn,group_id,current_user["user_id"])
+        return {"msg": "Rời nhóm thành công"}
+    except asyncpg.PostgresError as e:
+        raise HTTPException(status_code=400, detail=str(e).split(":")[-1].strip())
 @router.get("/members")
 async def read_group_member(
     group_id :int,
@@ -68,22 +130,14 @@ async def read_group_member(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/", response_model=GroupOut)
+@router.post("/")
 async def create_group_route(
     group: GroupCreate,
     current_user=Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_conn),
 ):
     try:
-        group_id = await create_group(
-            conn, group.group_name, group.description, current_user["user_id"]
-        )
-        await add_member(conn, group_id, current_user["user_id"], "leader")
-        return {
-            "group_id": group_id,
-            "group_name": group.group_name,
-            "description": group.description,
-        }
+        await create_group(conn,group.group_name,group.description,current_user["user_id"])
     except UniqueViolationError:
         # Giả sử group_name là UNIQUE
         raise HTTPException(
@@ -349,3 +403,69 @@ async def make_member_to_leader(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Có lỗi hệ thống xảy ra.",
         )
+@router.patch("/{group_id}", response_model=GroupOut)
+async def update_group_details(
+    group_id: int,
+    group_data: GroupUpdate, # (Dữ liệu đầu vào từ body)
+    current_user=Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_conn),
+):
+    """
+    Cập nhật chi tiết nhóm (Tên, Mô tả).
+    Chỉ có Leader mới được dùng API này.
+    """
+    
+    # 1. Kiểm tra quyền (Permission Check)
+    role = await conn.fetchval(
+        """
+        SELECT role FROM group_members 
+        WHERE user_id = $1 AND group_id = $2
+        """,
+        current_user["user_id"], group_id
+    )
+    
+    if role != 'leader':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Chỉ leader mới có quyền sửa thông tin nhóm"
+        )
+
+    # 2. Lấy các trường mà người dùng gửi lên (bỏ qua các trường None)
+    # exclude_unset=True nghĩa là chỉ lấy các trường được gửi trong JSON
+    update_data = group_data.dict(exclude_unset=True)
+    
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Không có dữ liệu nào để cập nhật"
+        )
+
+    # 3. Xây dựng câu lệnh UPDATE một cách tự động
+    set_clauses = []
+    values = []
+    arg_count = 1 # (Biến đếm cho $1, $2, ...)
+    
+    for key, value in update_data.items():
+        set_clauses.append(f"{key} = ${arg_count}") # "group_name = $1", "description = $2"
+        values.append(value)
+        arg_count += 1
+    
+    # Thêm group_id vào cuối danh sách values
+    values.append(group_id)
+
+    # 4. Thực thi câu lệnh
+    query = f"""
+        UPDATE groups 
+        SET {', '.join(set_clauses)}
+        WHERE group_id = ${arg_count}
+        RETURNING * """ # RETURNING * để trả về dữ liệu đã cập nhật
+    
+    updated_group = await conn.fetchrow(query, *values)
+
+    if not updated_group:
+         raise HTTPException(
+             status_code=status.HTTP_404_NOT_FOUND, 
+             detail="Không tìm thấy nhóm"
+         )
+
+    return dict(updated_group)

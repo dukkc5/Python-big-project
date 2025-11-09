@@ -1,51 +1,23 @@
-from anyio import current_effective_deadline
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
 import asyncpg
-from datetime import datetime
-
-from app.api.crud import notifications_crud
-from app.api.crud.notifications_crud import create_notification,get_notification
-from app.models.notification import NotificationOut
-from app.router.auth import get_user_by_account
-from app.config.db import get_db
-from app.api.deps import get_current_user, get_db_conn,check_user_role
-from app.api.crud.group_crud import get_group_id,get_user_role
-from asyncpg.exceptions import ForeignKeyViolationError
+from typing import List, Dict, Any, Union
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from asyncpg import PostgresError, exceptions
+from datetime import datetime
+from app.models import notification
 
-from app.api.crud.notifications_crud import get_notification
-    
+from app.api.deps import get_current_user, get_db_conn
+from app.api.crud.notifications_crud import delete_all_notifications_by_user, get_notifications_by_user
 
-router = APIRouter(prefix="/notifications",tags=["notifications"])
-@router.get("/", response_model=List[NotificationOut])
-async def read_notifications(
-    current_user=Depends(get_current_user),
-    conn: asyncpg.Connection = Depends(get_db_conn)
+router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+@router.get("/",response_model=List[notification.NotificationOut])
+async def get_noti(
+    conn:asyncpg.Connection=Depends(get_db_conn), 
+    current_user=Depends(get_current_user)):
+    return await get_notifications_by_user(conn,current_user["user_id"])
+@router.delete("/",status_code=status.HTTP_204_NO_CONTENT)
+async def delete_all_noti(
+    conn:asyncpg.Connection=Depends(get_db_conn), 
+    current_user=Depends(get_current_user)
 ):
-    try:
-        rows = await get_notification(conn, current_user["user_id"])
-
-        notifications = []
-        for row in rows:
-            message = f"Leader {row['leader_name']} đã giao nhiệm vụ {row['task_id']} cho bạn."
-            notifications.append({
-                "notification_id": row["notification_id"],
-                "message": message,
-                "created_at": row["created_at"]
-            })
-
-        return notifications
-
-    except asyncpg.PostgresError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi cơ sở dữ liệu: {str(e)}"
-        )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Đã xảy ra lỗi khi đọc thông báo: {str(e)}"
-        )
+    await delete_all_notifications_by_user(conn,current_user["user_id"])

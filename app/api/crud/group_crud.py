@@ -3,23 +3,20 @@ import asyncpg
 async def get_user_groups(conn: asyncpg.Connection, user_id: int):
     rows = await conn.fetch(
         """
-        SELECT g.group_id, g.group_name, g.description
-        FROM groups g
-        JOIN group_members gm ON g.group_id = gm.group_id
-        WHERE gm.user_id = $1
+      SELECT * FROM get_user_groups_with_details($1)
         """,
         user_id
     )
     return [dict(row) for row in rows]
-async def create_group(conn:asyncpg.Connection, name:str , description:str, owner_id :int):
-    row = await conn.fetchrow(
-        "INSERT INTO groups (group_name , description , owner_id) VALUES ($1,$2,$3) RETURNING group_id",
+
+async def create_group(conn:asyncpg.Connection, name:str , description:str, owner_id :int): #procedure
+     await conn.execute(
+        "CALL create_group_with_leader($1, $2, $3);",
         name , description , owner_id
     )
-    return row["group_id"]
 async def add_member(conn: asyncpg.Connection, group_id: int, user_id: int, role: str):
     await conn.execute(
-        "INSERT INTO group_members (group_id, user_id, role) VALUES ($1, $2, $3)",
+        "INSERT INTO group_members (group_id, user_id, role) VALUES ($1, $2, $3)",  
         group_id, user_id, role
     )
 async def get_group_id(conn:asyncpg.Connection , id :int)-> dict:
@@ -50,20 +47,21 @@ async def change_role(conn : asyncpg.Connection, group_id :int , user_id :int , 
     "UPDATE group_members SET role = $1 WHERE group_id=$2 AND user_id = $3",role,group_id,user_id )   
 async def get_group_member(conn: asyncpg.Connection , group_id : int):
             rows = await conn.fetch(
-                """SELECT
-            u.user_id,
-            u.full_name,
-            u.account,
-            gm.role
-        FROM
-            users u
-        JOIN
-            group_members gm ON u.user_id = gm.user_id
-        WHERE
-            gm.group_id = $1; 
+                """SELECT 
+    u.user_id, 
+    u.full_name, 
+    u.account, 
+    u.avatar_url, 
+    gm.role
+FROM 
+    group_members AS gm
+JOIN 
+    users AS u ON gm.user_id = u.user_id
+WHERE 
+    gm.group_id = $1; -- ($1 là group_id)
         """,group_id)                                                                                                                                                                        
             return [dict(row) for row in rows]
-async def leave_group(conn:asyncpg.Connection , group_id :int,user_id:int):
+async def leave_group(conn:asyncpg.Connection , group_id :int,user_id:int): #procedure
     await conn.execute("""
-    DELETE FROM group_members WHERE group_id = $1 AND user_id = $2
+   CALL leave_group($1, $2)
 """,group_id,user_id)

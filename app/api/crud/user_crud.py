@@ -13,3 +13,20 @@ async def get_user_by_account(conn: asyncpg.Connection, account:str):
 async def get_user_by_id(conn: asyncpg.Connection, id: int):
     row = await conn.fetchrow("SELECT * FROM users WHERE user_id = $1", id)
     return dict(row) if row else None
+async def update_fcm_token(conn: asyncpg.Connection, user_id: int, fcm_token: str):
+    """
+    Cập nhật hoặc chèn fcm_token cho một user.
+    """
+    query = """
+        UPDATE users
+        SET fcm_token = $1
+        WHERE user_id = $2
+    """
+    await conn.execute(query, fcm_token, user_id)
+
+# (MỚI) Hàm này sẽ cần ở bước sau
+async def get_fcm_token(conn: asyncpg.Connection, user_id: int) -> str | None:
+    """
+    Lấy fcm_token của một user.
+    """
+    return await conn.fetchval("SELECT fcm_token FROM users WHERE user_id = $1", user_id)

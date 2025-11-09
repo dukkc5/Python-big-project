@@ -11,6 +11,7 @@ from app.config.config import settings
 
 async def get_db_conn():
     async with get_db() as conn:
+        await conn.execute("SET TIMEZONE TO 'Asia/Ho_Chi_Minh'")
         yield conn
 async def get_current_user (
     credentials: HTTPAuthorizationCredentials = Depends(security),

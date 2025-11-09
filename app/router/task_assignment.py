@@ -54,7 +54,6 @@ async def assign_task(
             raise HTTPException(status_code=403, detail="Không có quyền giao nhiệm vụ")
 
         await create_users_tasks(conn,assignment.task_id, assignment.user_id,current_user["user_id"], assignment.comment,assignment.deadline)
-
         return {"msg": "Giao nhiệm vụ thành công"}
 
     except exceptions.UniqueViolationError:

@@ -22,6 +22,7 @@ class TaskAssignmentOut(BaseModel):
     comment: Optional[str] = None
     status : str
     deadline: Optional[datetime] = None
+    group_id : int 
 class AssignmentUpdate(BaseModel):
     status: Optional[str] = None
     deadline: Optional[datetime] = None

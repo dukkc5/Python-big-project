@@ -1,4 +1,5 @@
 import email
+from typing import Optional
 from pydantic import BaseModel 
 class UserCreate(BaseModel):
     account:str
@@ -11,5 +12,7 @@ class Token(BaseModel):
     access_token  : str
     token_type : str
 class UserOut(BaseModel):
-    full_name:str
-    account : str
+    user_id: int
+    full_name: str
+    account: str
+    avatar_url: Optional[str] = None # <-- THÊM DÒNG NÀY
